@@ -1379,7 +1379,7 @@ func New(cfg Config) (*Agent, error) {
 				description: description,
 				handler:     handler,
 				pctx:        pctx,
-			})
+			}, CommandInfo{Name: name, Usage: name, Description: description})
 		})
 		// Re-wire commands after every plugin reload
 		agent.pluginMgr.OnReload(func() {
@@ -1387,7 +1387,7 @@ func New(cfg Config) (*Agent, error) {
 			agent.commands.mu.Lock()
 			filtered := agent.commands.commands[:0]
 			for _, cmd := range agent.commands.commands {
-				if _, ok := cmd.(*pluginCmdAdapter); !ok {
+				if !isPluginCommand(cmd) {
 					filtered = append(filtered, cmd)
 				}
 			}
@@ -1400,7 +1400,7 @@ func New(cfg Config) (*Agent, error) {
 					description: description,
 					handler:     handler,
 					pctx:        pctx,
-				})
+				}, CommandInfo{Name: name, Usage: name, Description: description})
 			})
 			plugin.WirePluginCrons(agent.pluginMgr, agent.cronSvc)
 			plugin.WirePluginThemes(agent.pluginMgr, func(id string, data []byte) error {
@@ -1727,6 +1727,14 @@ func (a *Agent) Close() error {
 // Returns nil if the plugin system is not initialized.
 func (a *Agent) PluginManager() *plugin.PluginManager {
 	return a.pluginMgr
+}
+
+// CommandNames returns visible slash/bang commands from the registry.
+func (a *Agent) CommandNames() []string {
+	if a == nil || a.commands == nil {
+		return nil
+	}
+	return a.commands.CommandNames()
 }
 
 // NOTE: math/rand is intentionally used here for non-cryptographic random selection
